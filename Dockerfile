@@ -12,4 +12,4 @@ RUN npm ci --omit=dev
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/public ./public
 COPY --from=build /app/prisma ./prisma
-CMD ["sh","-c","npx prisma migrate deploy && node dist/src/app.js"]
+CMD ["sh","-c","npx prisma db push && node dist/src/app.js"]
