@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --test --import tsx tests/**/*.test.ts",
     "prisma:generate": "prisma generate",
+    "prisma:push": "prisma db push",
     "prisma:migrate": "prisma migrate deploy"
   },
   "dependencies": {
