@@ -1,0 +1,2 @@
+import { status } from 'minecraft-server-util';
+export async function testServerConnection(host:string,port:number,edition:string,version?:string){if(edition==='BEDROCK')return {status:'unsupported',ping:null,edition:'BEDROCK',version:version||null};const result=await status(host,port,{timeout:10000});return {status:'ONLINE',ping:result.roundTripLatency,edition:'JAVA',version:result.version?.name||version||null,players:result.players?.online||0};}
