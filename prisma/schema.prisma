@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ServerEdition { JAVA BEDROCK AUTO }
+enum ServerStatus { UNKNOWN ONLINE OFFLINE ERROR }
+enum BotStatus { OFFLINE STARTING CONNECTING ONLINE RECONNECTING STOPPING ERROR KICKED AUTH_REQUIRED }
+enum LogLevel { INFO WARNING ERROR CONNECTION COMMAND AUTH AUTOMATION SYSTEM }
+enum AuthType { OFFLINE MICROSOFT LOGIN_PLUGIN CUSTOM }
+enum TriggerType { BOT_START BOT_ONLINE BOT_OFFLINE BOT_RECONNECT BOT_ERROR BOT_KICKED CHAT_MESSAGE PLAYER_JOIN PLAYER_LEAVE AUTH_REQUIRED AUTH_SUCCESS AUTH_FAILED COMMAND_EXECUTED COMMAND_FAILED SCHEDULE }
+enum ConditionOperator { equals not_equals contains not_contains starts_with ends_with greater_than less_than }
+enum ActionType { SEND_CHAT EXECUTE_COMMAND SEND_NOTIFICATION DELAY START_BOT STOP_BOT RESTART_BOT }
+enum ScheduleType { INTERVAL_MINUTES INTERVAL_HOURS DAILY WEEKLY SPECIFIC }
+
+model User {
+  id String @id @default(cuid())
+  email String @unique
+  passwordHash String?
+  name String?
+  image String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  servers Server[]
+  notifications Notification[]
+}
+model Server {
+  id String @id @default(cuid())
+  userId String
+  name String
+  host String
+  port Int @default(25565)
+  edition ServerEdition @default(AUTO)
+  version String?
+  status ServerStatus @default(UNKNOWN)
+  ping Int?
+  lastConnection DateTime?
+  settings Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bots Bot[]
+  @@index([userId, createdAt])
+}
+model Bot {
+  id String @id @default(cuid())
+  serverId String
+  name String
+  username String
+  status BotStatus @default(OFFLINE)
+  runtimeId String?
+  minecraftVersion String?
+  edition ServerEdition @default(JAVA)
+  autoReconnect Boolean @default(true)
+  maxRetries Int @default(10)
+  reconnectDelay Int @default(5000)
+  lastOnlineAt DateTime?
+  lastOfflineAt DateTime?
+  lastError String?
+  ping Int?
+  reconnectCount Int @default(0)
+  startOnBoot Boolean @default(false)
+  settings Json?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  server Server @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  runtime BotRuntime?
+  logs BotLog[]
+  chat ChatMessage[]
+  commands CommandExecution[]
+  events BotEvent[]
+  notifications Notification[]
+  authConfig AuthConfig?
+  automations Automation[]
+  schedules Schedule[]
+  workflows Workflow[]
+  backups Backup[]
+  monitoring MonitoringRecord[]
+  players Player[]
+  @@index([serverId, status])
+  @@index([createdAt])
+}
+model BotRuntime { id String @id @default(cuid()); botId String @unique; status BotStatus; startedAt DateTime?; stoppedAt DateTime?; reconnectCount Int @default(0); lastError String?; bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade); @@index([status, startedAt]) }
+model BotLog { id String @id @default(cuid()); userId String; serverId String; botId String; level LogLevel; category String?; message String; createdAt DateTime @default(now()); bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade); @@index([userId, serverId, botId, createdAt]); @@index([botId, level]) }
+model ChatMessage { id String @id @default(cuid()); botId String; player String; message String; direction String; createdAt DateTime @default(now()); bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade); @@index([botId, createdAt]) }
+model CommandExecution { id String @id @default(cuid()); botId String; command String; status String; result String?; createdAt DateTime @default(now()); bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade); @@index([botId, createdAt]) }
+model BotEvent { id String @id @default(cuid()); botId String; type TriggerType; reason String?; payload Json?; createdAt DateTime @default(now()); bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade); @@index([botId, type, createdAt]) }
+model Notification { id String @id @default(cuid()); userId String; botId String?; type String; title String; message String; read Boolean @default(false); createdAt DateTime @default(now()); user User @relation(fields: [userId], references: [id], onDelete: Cascade); bot Bot? @relation(fields: [botId], references: [id], onDelete: Cascade); @@index([userId, createdAt]) }
+model AuthConfig { id String @id @default(cuid()); botId String @unique; type AuthType @default(OFFLINE); autoLogin Boolean @default(false); loginCommand String?; registerCommand String?; loginTrigger String?; delay Int @default(1000); secretCiphertext String?; bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade) }
+model Automation { id String @id @default(cuid()); botId String; name String; enabled Boolean @default(true); trigger TriggerType; cooldown Int @default(0); executionLimit Int @default(100); maxDepth Int @default(5); createdAt DateTime @default(now()); updatedAt DateTime @updatedAt; bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade); conditions AutomationCondition[]; actions AutomationAction[]; executions AutomationExecution[]; @@index([botId, trigger]) }
+model AutomationCondition { id String @id @default(cuid()); automationId String; field String; operator ConditionOperator; value String; order Int @default(0); automation Automation @relation(fields: [automationId], references: [id], onDelete: Cascade) }
+model AutomationAction { id String @id @default(cuid()); automationId String; type ActionType; value String?; delay Int @default(0); order Int @default(0); automation Automation @relation(fields: [automationId], references: [id], onDelete: Cascade) }
+model AutomationExecution { id String @id @default(cuid()); automationId String; status String; error String?; createdAt DateTime @default(now()); automation Automation @relation(fields: [automationId], references: [id], onDelete: Cascade); @@index([automationId, createdAt]) }
+model Schedule { id String @id @default(cuid()); botId String; name String; enabled Boolean @default(true); type ScheduleType; interval Int?; weekday Int?; time String?; command String; nextRunAt DateTime; lastRunAt DateTime?; lockedAt DateTime?; bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade); @@index([nextRunAt, enabled]) }
+model Workflow { id String @id @default(cuid()); botId String; name String; enabled Boolean @default(true); definition Json; createdAt DateTime @default(now()); updatedAt DateTime @updatedAt; bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade) }
+model Backup { id String @id @default(cuid()); botId String; label String; data Json; createdAt DateTime @default(now()); bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade) }
+model MonitoringRecord { id String @id @default(cuid()); botId String; status BotStatus; ping Int?; uptime Int @default(0); reconnects Int @default(0); errors Int @default(0); recordedAt DateTime @default(now()); bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade); @@index([botId, recordedAt]) }
+model Player { id String @id @default(cuid()); botId String; uuid String?; name String; joinedAt DateTime?; lastSeenAt DateTime?; online Boolean @default(false); bot Bot @relation(fields: [botId], references: [id], onDelete: Cascade); @@unique([botId, name]); @@index([botId, online]) }

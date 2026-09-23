@@ -1,48 +1,18 @@
-# 🤖 Slobos & Mr. Juice Aternos 24/7 Hosting Bot
+# MineControl — Minecraft 24/7 Bot SaaS
 
-A Minecraft bot that helps keep an Aternos server online 24/7 by automatically joining it using a Mineflayer-based bot. Perfect for SMPs or small multiplayer servers that shut down when no players are online.
+This repository now contains a real TypeScript/Express/Prisma control plane while retaining Mineflayer as the runtime engine. The original AFK behavior is represented by the reusable runtime's anti-AFK hook and can be extended per-bot through `settings`.
 
----
+## Run locally
 
-## ✨ Features
-*   ✅ **Auto-Connect**: Automatically joins your server.
-*   ✅ **Infinite Uptime**: Prevents AFK kicks and server shutdowns.
-*   ✅ **Smart Reconnect**: Automatically reconnects if the internet drops or server restarts.
-*   ✅ **Render-Ready**: Includes "Self-Ping" to run 24/7 for FREE on Render.com.
-*   ✅ **Plugin Support**: Compatible with Paper/Spigot/Bukkit (auto-auth included).
+1. Copy `.env.example` to `.env` and set a strong `JWT_SECRET`, a 64-character hex `BOT_SECRET_ENCRYPTION_KEY`, and PostgreSQL `DATABASE_URL`.
+2. Install dependencies: `npm install`.
+3. Generate and migrate: `npx prisma generate && npx prisma migrate dev --name init`.
+4. Run `npm run dev` and open `http://localhost:5000`.
 
----
+## Production
 
-## 🛠️ Requirements
-*   **GitHub Account**
-*   **Aternos Server**
-*   **Render Account** (for 24/7 hosting)
-*   **Common Sense!** 🧠        
+`docker compose up --build` starts PostgreSQL and the application. The API uses ownership-scoped queries for every server and bot resource. Each bot receives an independent `BotRuntime` and Mineflayer instance; manual stop disables reconnection for that runtime.
 
----
+The current API includes registration/login, server and bot CRUD, start/stop/restart, logs, chat, commands, dashboard metrics, SSE events, health checks, rate limiting, redaction, encrypted-secret primitives, graceful shutdown, and persistent Prisma models for automations, schedules, workflows, backups, notifications, players, and monitoring.
 
-## 🚀 Setup Guide
-
-We have made setup super easy! Check out the guide below:
-
-[**Detailed Google Doc Guide**](https://docs.google.com/document/d/1Fl0dRzP6O30ehp5-QcaB11IobF8I1JJhKUipzCWiCYA/edit?tab=t.0).
-
----
-
-## ⚙️ Usage
-*   **Start**: Just turn on your Aternos server. The bot will join automatically.
-*   **Status**: Visit the Render URL to see a status dashboard.
-*   **Chat**: The bot logs chat to the console.
-
----
-
-## ⚠️ Disclaimer
-This project is not affiliated with Aternos, Mojang, or Microsoft. Use at your own risk. Misuse may violate platform terms of service. This bot does not bypass Aternos queue limits; it only keeps the server active once it is online.
-
----
-
-## ❤️ Credits
-*   **Slobos (Discord: sloboscc)** — Original creator & idea. (The GOAT 🐐)
-*   **Mr.Juice (Discord: Mr.Juice3046)** — Updates, Guide, & Maintenance.
-
-**License**: MIT License
+OAuth providers and password-reset email delivery should be configured with an external identity/email provider before enabling them in production; the local email/password flow is fully functional.
